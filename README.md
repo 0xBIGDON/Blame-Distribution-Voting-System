@@ -1,0 +1,162 @@
+## Blame Distribution Voting System
+
+- **Version**: 1.0  
+- **Date**: 2026-01-25  
+- **Scope**: BSC Smart Contract (BEP-20 voting, majority scapegoat, owner finalize + push distribution)
+
+---
+
+## 1. System Overview
+
+### 1.1 Problem Definition
+
+A voting smart contract is required on BNB Smart Chain (BSC) with the following properties:
+
+- Each voting event contains exactly four predefined options (“scapegoat candidates”)
+- Users vote using a single BEP-20 token with a customizable amount  
+  (1 token = 1 vote)
+- All voting tokens are accumulated into a single prize pool
+- After voting ends:
+  - The option with the highest total token amount becomes the scapegoat
+  - All users who voted for that option receive a proportional share of the entire prize pool
+
+---
+
+### 1.2 Proposed Architecture
+
+The system is implemented as a:
+
+**Variable-Amount Voting + Owner-Triggered Finalization + Push-Based Distribution Contract**
+
+Core flow:
+
+1. During the voting period:
+   - The contract accepts votes
+   - Accumulates vote amounts for each of the four options
+2. After the voting period ends:
+   - The owner calls `finalizeAndDistribute()`
+   - In a single transaction, the contract:
+     - Determines the scapegoat option
+     - Distributes the entire prize pool proportionally to all winners
+
+---
+
+### 1.3 Success Criteria (KPIs)
+
+- Correct scapegoat selection based on maximum total votes
+- 100% prize pool distribution with deterministic dust handling
+- Single-transaction finalization under enforced voter cap
+- Owner cannot withdraw voting tokens
+- Core logic test coverage ≥ 90%, Slither with no high/critical issues
+
+---
+
+## 2. Fixed Product Rules
+
+- Scapegoat is the option with the highest total token amount
+- No user-initiated claim; rewards are pushed by owner
+- Tie-breaker: smallest optionId wins
+- Dust assigned to the last distributed winner
+- Enforced `maxVotersPerRound` (recommended default: 2000)
+- Only standard ERC20/BEP20 tokens supported
+- Ownership should be transferred to multisig; v1 is not upgradeable
+
+---
+
+## 3. User Roles
+
+### Voter
+- Votes once per round with a custom token amount
+
+### Winner
+- Takes no action; receives rewards automatically
+
+### Owner / Operator
+- Configures voting parameters
+- Starts and finalizes rounds
+- Can pause/unpause and recover non-voting tokens
+
+---
+
+## 4. Functional Specifications
+
+### 4.1 Voting
+
+Conditions:
+- `startTime <= block.timestamp <= endTime`
+- One vote per address per round
+- `optionId` in `[0,3]`
+- `amount > 0`
+- Revert if `voters.length >= maxVotersPerRound`
+
+State Updates:
+- Record vote
+- Increment optionVotes and totalPrizePool
+- Mark voter as voted
+- Append voter address
+
+Event:
+- `Voted(roundId, voter, optionId, amount)`
+
+---
+
+### 4.2 Finalize and Distribute
+
+Conditions:
+- Owner only
+- `block.timestamp > endTime`
+- Round not finalized
+
+Logic:
+- Determine scapegoat option (max votes, tie → smallest optionId)
+- Distribute rewards proportionally
+- Assign dust to last winner
+- Complete in same transaction
+
+Events:
+- `RoundFinalized(roundId, scapegoatOptionId, pool, winnerTotal, winnerCount)`
+- `RewardDistributed(roundId, winner, amount)`
+
+---
+
+### 4.3 Start New Round
+
+Conditions:
+- Owner only
+- Previous round finalized
+- `startTime < endTime`
+- `endTime > block.timestamp`
+
+Effects:
+- Increment roundId
+- Set start and end time
+
+Event:
+- `RoundStarted(roundId, startTime, endTime)`
+
+---
+
+### 4.4 Admin Configuration
+
+- Set voting title
+- Set option names
+- Set max voters per round
+
+Rules:
+- Owner only
+- Changes allowed only before voting starts
+- All changes must emit events
+
+---
+
+## 5. Non-Goals
+
+- No randomness / VRF
+- No pull-based claim
+- No fee-on-transfer or rebasing tokens
+- No unlimited participants per transaction
+"""
+
+path = Path("/mnt/data/Blame_Distribution_Voting_DEV_SPEC.md")
+path.write_text(md_content, encoding="utf-8")
+str(path)
