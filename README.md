@@ -3,6 +3,7 @@
 - **Version**: 1.0  
 - **Date**: 2026-01-25  
 - **Scope**: BSC Smart Contract (BEP-20 voting, majority scapegoat, owner finalize + push distribution)
+- Test Address (for testing and demonstration purposes): https://big-don.net/
 
 ---
 
